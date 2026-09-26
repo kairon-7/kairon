@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kairon — Scripter & Gamer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05080f;
+    --surface: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --accent: #5b8cff;
+    --accent2: #a855f7;
+    --accent3: #22d3ee;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    cursor: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  /* CURSOR */
+  #cursor {
+    position: fixed; width: 12px; height: 12px;
+    background: var(--accent); border-radius: 50%;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, background 0.2s, width 0.2s, height 0.2s;
+    mix-blend-mode: screen;
+  }
+  #cursor-ring {
+    position: fixed; width: 36px; height: 36px;
+    border: 1.5px solid rgba(91,140,255,0.5); border-radius: 50%;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all 0.18s cubic-bezier(0.23,1,0.32,1);
+  }
+  body:has(a:hover) #cursor, body:has(button:hover) #cursor { width: 20px; height: 20px; background: var(--accent2); }
+  body:has(a:hover) #cursor-ring, body:has(button:hover) #cursor-ring { width: 56px; height: 56px; border-color: rgba(168,85,247,0.5); }
+
+  /* CANVAS */
+  #particle-canvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+
+  /* AURORA BEAMS */
+  .aurora {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .beam {
+    position: absolute; border-radius: 50%;
+    filter: blur(80px); opacity: 0;
+    animation: aurora-drift linear infinite;
+  }
+  .beam-1 {
+    width: 600px; height: 200px;
+    background: linear-gradient(90deg, rgba(91,140,255,0.15), rgba(168,85,247,0.1), transparent);
+    top: 15%; left: -10%;
+    animation-duration: 14s; animation-delay: 0s;
+  }
+  .beam-2 {
+    width: 500px; height: 160px;
+    background: linear-gradient(90deg, rgba(34,211,238,0.1), rgba(91,140,255,0.12), transparent);
+    top: 55%; left: -10%;
+    animation-duration: 18s; animation-delay: -6s;
+  }
+  .beam-3 {
+    width: 700px; height: 180px;
+    background: linear-gradient(90deg, rgba(168,85,247,0.1), rgba(34,211,238,0.08), transparent);
+    top: 80%; left: -10%;
+    animation-duration: 22s; animation-delay: -10s;
+  }
+  @keyframes aurora-drift {
+    0%   { transform: translateX(0) scaleY(1); opacity: 0; }
+    10%  { opacity: 1; }
+    50%  { transform: translateX(120vw) scaleY(1.4); opacity: 0.8; }
+    90%  { opacity: 0.3; }
+    100% { transform: translateX(130vw) scaleY(1); opacity: 0; }
+  }
+
+  /* GRID */
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(91,140,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(91,140,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    background: rgba(5,8,15,0.75);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    letter-spacing: 0.05em; cursor: none;
+  }
+  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; cursor: none; }
+  .nav-links a:hover { color: var(--text); }
+  .status-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulse-dot 2s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;box-shadow:0 0 8px #22c55e;}50%{opacity:0.5;box-shadow:0 0 2px #22c55e;} }
+
+  main { position: relative; z-index: 1; }
+  section { padding: 100px 24px; }
+  .container { max-width: 860px; margin: 0 auto; width: 100%; }
+
+  /* HERO */
+  .hero { min-height: 100vh; display: flex; align-items: center; padding-top: 80px; position: relative; }
+  .hero-inner { max-width: 860px; margin: 0 auto; width: 100%; }
+
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(91,140,255,0.1); border: 1px solid rgba(91,140,255,0.25);
+    border-radius: 100px; padding: 6px 16px; font-size: 12px;
+    font-family: 'Space Mono', monospace; color: var(--accent); margin-bottom: 32px;
+    animation: fadeup 0.8s ease both;
+  }
+
+  /* GLITCH NAME */
+  .hero-name {
+    font-size: clamp(52px, 10vw, 96px); font-weight: 700;
+    line-height: 0.95; letter-spacing: -0.03em; margin-bottom: 24px;
+    animation: fadeup 0.8s 0.1s ease both;
+  }
+  .name-line-1 { display: block; color: var(--text); }
+  .name-line-2 {
+    display: block; position: relative;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    background-size: 200% 200%;
+    animation: fadeup 0.8s 0.1s ease both, gradshift 6s ease-in-out infinite;
+  }
+  .name-line-2::before, .name-line-2::after {
+    content: attr(data-text);
+    position: absolute; top: 0; left: 0;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    background-size: 200% 200%;
+  }
+  .name-line-2::before { animation: glitch-1 4s infinite; clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%); }
+  .name-line-2::after  { animation: glitch-2 4s infinite; clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); }
+  @keyframes glitch-1 {
+    0%,90%,100% { transform: translate(0); opacity:0; }
+    91% { transform: translate(-4px, 2px); opacity:0.8; }
+    93% { transform: translate(4px, -2px); opacity:0.6; }
+    95% { transform: translate(-2px, 0); opacity:0.4; }
+    97% { transform: translate(0); opacity:0; }
+  }
+  @keyframes glitch-2 {
+    0%,88%,100% { transform: translate(0); opacity:0; }
+    89% { transform: translate(4px, -1px); opacity:0.7; }
+    91% { transform: translate(-4px, 2px); opacity:0.5; }
+    93% { transform: translate(2px, 0); opacity:0.3; }
+    95% { transform: translate(0); opacity:0; }
+  }
+  @keyframes gradshift { 0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;} }
+
+  .hero-bio {
+    font-size: 18px; color: var(--muted); line-height: 1.6;
+    max-width: 520px; margin-bottom: 48px; font-weight: 400;
+    animation: fadeup 0.8s 0.2s ease both;
+  }
+  .hero-ctas { display: flex; gap: 16px; flex-wrap: wrap; animation: fadeup 0.8s 0.3s ease both; }
+
+  /* MAGNETIC BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600;
+    font-family: 'Space Grotesk', sans-serif; text-decoration: none;
+    cursor: none; border: none; transition: box-shadow 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .btn::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.15), transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .btn:hover::after { opacity: 1; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+    box-shadow: 0 0 30px rgba(91,140,255,0.3), 0 0 60px rgba(91,140,255,0.1);
+  }
+  .btn-primary:hover { box-shadow: 0 0 40px rgba(91,140,255,0.6), 0 0 80px rgba(91,140,255,0.2); }
+  .btn-ghost {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.07); }
+
+  .scroll-hint {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    color: var(--muted); font-size: 11px; font-family: 'Space Mono', monospace;
+    animation: fadeup 1s 0.8s ease both;
+  }
+  .scroll-line { width: 1px; height: 40px; background: linear-gradient(to bottom, var(--muted), transparent); animation: scrollpulse 2s ease-in-out infinite; }
+  @keyframes scrollpulse { 0%,100%{opacity:0.3;}50%{opacity:1;} }
+  @keyframes fadeup { from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);} }
+
+  .divider { width: 100%; height: 1px; background: var(--border); }
+  .section-label { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px; }
+  .section-title { font-size: clamp(28px, 5vw, 42px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 16px; }
+  .section-sub { color: var(--muted); font-size: 16px; line-height: 1.6; max-width: 480px; margin-bottom: 48px; }
+
+  /* GOAL CARDS */
+  .goals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .goal-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; position: relative; overflow: hidden;
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.2s, box-shadow 0.3s;
+    cursor: none;
+  }
+  .goal-card.visible { opacity: 1; transform: translateY(0); }
+  .goal-card:hover {
+    border-color: rgba(91,140,255,0.4);
+    box-shadow: 0 0 30px rgba(91,140,255,0.1), 0 20px 40px rgba(0,0,0,0.4);
+    transform: translateY(-6px) scale(1.01);
+  }
+  .goal-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(91,140,255,0.08), transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .goal-card:hover::before { opacity: 1; }
+  /* scan line on hover */
+  .goal-card::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    top: -2px; opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .goal-card:hover::after { opacity: 1; animation: scan-line 1.2s linear infinite; }
+  @keyframes scan-line { from{top:-2px;}to{top:102%;} }
+
+  .goal-icon { font-size: 28px; margin-bottom: 14px; display: block; position: relative; z-index:1; }
+  .goal-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text); position: relative; z-index:1; }
+  .goal-desc { font-size: 13px; color: var(--muted); line-height: 1.5; position: relative; z-index:1; }
+  .goal-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; font-size: 11px; font-family: 'Space Mono', monospace; padding: 4px 10px; border-radius: 100px; position: relative; z-index:1; }
+  .status-active { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+  .status-next { background: rgba(91,140,255,0.1); color: var(--accent); border: 1px solid rgba(91,140,255,0.2); }
+
+  /* SLIDESHOW */
+  .slideshow-wrap { position: relative; margin-bottom: 48px; }
+  .slideshow {
+    position: relative; border-radius: 20px; overflow: hidden;
+    border: 1px solid var(--border); background: var(--surface);
+    aspect-ratio: 16/7; min-height: 200px;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 40px;
+    opacity: 0; transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: translateX(60px);
+  }
+  .slide.active { opacity: 1; transform: translateX(0); }
+  .slide.out { opacity: 0; transform: translateX(-60px); }
+  .slide-emoji { font-size: 56px; filter: drop-shadow(0 0 24px rgba(91,140,255,0.5)); animation: float-emoji 3s ease-in-out infinite; }
+  @keyframes float-emoji { 0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);} }
+  .slide-title { font-size: clamp(20px,4vw,32px); font-weight: 700; letter-spacing: -0.02em; text-align: center; }
+  .slide-sub { font-size: 14px; color: var(--muted); text-align: center; font-family: 'Space Mono', monospace; }
+  .slide-bg-1 { background: radial-gradient(ellipse at center, rgba(91,140,255,0.09) 0%, transparent 70%); }
+  .slide-bg-2 { background: radial-gradient(ellipse at center, rgba(168,85,247,0.09) 0%, transparent 70%); }
+  .slide-bg-3 { background: radial-gradient(ellipse at center, rgba(34,211,238,0.08) 0%, transparent 70%); }
+  .slide-bg-4 { background: radial-gradient(ellipse at center, rgba(251,146,60,0.08) 0%, transparent 70%); }
+  .slide-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 0 4px; }
+  .slide-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 16px; cursor: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+  .slide-btn:hover { border-color: var(--accent); background: rgba(91,140,255,0.1); box-shadow: 0 0 12px rgba(91,140,255,0.3); }
+  .slide-dots { display: flex; gap: 6px; }
+  .slide-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); cursor: none; transition: background 0.3s, transform 0.2s, box-shadow 0.2s; }
+  .slide-dot.active { background: var(--accent); transform: scale(1.4); box-shadow: 0 0 8px var(--accent); }
+
+  /* CONTACT */
+  .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .contact-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 28px; display: flex; flex-direction: column; gap: 16px;
+    text-decoration: none; cursor: none;
+    position: relative; overflow: hidden;
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.2s, box-shadow 0.3s;
+  }
+  .contact-card.visible { opacity: 1; transform: translateY(0); }
+  .contact-card:hover {
+    border-color: rgba(91,140,255,0.4);
+    transform: translateY(-6px);
+    box-shadow: 0 0 40px rgba(91,140,255,0.12), 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .contact-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(91,140,255,0.07), transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .contact-card:hover::before { opacity: 1; }
+  .contact-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; position:relative; z-index:1; transition: transform 0.2s; }
+  .contact-card:hover .contact-icon { transform: scale(1.1); }
+  .icon-discord { background: rgba(88,101,242,0.15); border: 1px solid rgba(88,101,242,0.3); }
+  .icon-web { background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.25); }
+  .contact-label { font-size:12px; font-family:'Space Mono',monospace; color:var(--muted); letter-spacing:0.05em; position:relative; z-index:1; }
+  .contact-value { font-size:16px; font-weight:600; color:var(--text); position:relative; z-index:1; }
+  .contact-arrow { font-size:20px; color:var(--muted); margin-top:auto; position:relative; z-index:1; transition:transform 0.2s,color 0.2s; }
+  .contact-card:hover .contact-arrow { transform:translate(4px,-4px); color:var(--accent); }
+
+  /* RIPPLE */
+  .ripple {
+    position: fixed; border-radius: 50%; pointer-events: none; z-index: 9997;
+    background: radial-gradient(circle, rgba(91,140,255,0.4), transparent 70%);
+    transform: translate(-50%,-50%) scale(0);
+    animation: ripple-out 0.7s ease-out forwards;
+  }
+  @keyframes ripple-out { to { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+
+  .reveal { opacity:0; transform:translateY(32px); transition:opacity 0.7s ease,transform 0.7s ease; }
+  .reveal.visible { opacity:1; transform:translateY(0); }
+
+  footer {
+    padding: 40px 24px; text-align: center; color: var(--muted); font-size: 13px;
+    border-top: 1px solid var(--border); font-family: 'Space Mono', monospace;
+    position: relative; z-index: 1;
+  }
+  .footer-name {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  @media (max-width: 600px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    section { padding: 80px 20px; }
+    .hero { padding-top: 100px; }
+    body { cursor: auto; }
+    #cursor, #cursor-ring { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="particle-canvas"></canvas>
+<div class="aurora">
+  <div class="beam beam-1"></div>
+  <div class="beam beam-2"></div>
+  <div class="beam beam-3"></div>
+</div>
+<div class="grid-bg"></div>
+
+<nav>
+  <span class="nav-logo">Kairon</span>
+  <ul class="nav-links">
+    <li><a href="#goals">Goals</a></li>
+    <li><a href="#games">Games</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <div class="status-dot">
+    <span class="dot"></span>
+    <span>Online</span>
+  </div>
+</nav>
+
+<main>
+  <section class="hero" id="home">
+    <div class="hero-inner">
+      <div class="hero-tag">🎮 Scripter · Gamer · Builder</div>
+      <h1 class="hero-name">
+        <span class="name-line-1">Hey, I'm</span>
+        <span class="name-line-2" data-text="Kairon">Kairon</span>
+      </h1>
+      <p class="hero-bio">Learning Luau scripting, making friends, building things, and figuring it out one line of code at a time. Life's boring until you make it not.</p>
+      <div class="hero-ctas">
+        <a href="https://discord.gg/bwQFKJQxx" target="_blank" rel="noopener" class="btn btn-primary">💬 Join Discord Server</a>
+        <a href="https://rivoscripts.vercel.app" target="_blank" rel="noopener" class="btn btn-ghost">🌐 My Site</a>
+      </div>
+    </div>
+    <div class="scroll-hint">
+      <span>scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="goals">
+    <div class="container reveal">
+      <div class="section-label">// what I'm about</div>
+      <h2 class="section-title">Life Goals & Current Grind</h2>
+      <p class="section-sub">Not here to waste time. Here to build something, learn something, and find people worth building with.</p>
+      <div class="goals-grid">
+        <div class="goal-card">
+          <span class="goal-icon">👾</span>
+          <div class="goal-title">Learn Luau Scripting</div>
+          <div class="goal-desc">Building Roblox scripts from scratch. Learning the syntax, the logic, the whole thing.</div>
+          <span class="goal-status status-active">● Active</span>
+        </div>
+        <div class="goal-card" style="transition-delay:0.1s">
+          <span class="goal-icon">🤝</span>
+          <div class="goal-title">Make Real Friends</div>
+          <div class="goal-desc">Not looking for followers. Looking for people who actually want to build and talk and vibe.</div>
+          <span class="goal-status status-active">● Active</span>
+        </div>
+        <div class="goal-card" style="transition-delay:0.2s">
+          <span class="goal-icon">🚀</span>
+          <div class="goal-title">Build a Game</div>
+          <div class="goal-desc">Eventually ship something in Roblox that people actually play. Script it myself.</div>
+          <span class="goal-status status-next">→ Next up</span>
+        </div>
+        <div class="goal-card" style="transition-delay:0.3s">
+          <span class="goal-icon">💡</span>
+          <div class="goal-title">Turn Boredom Into Skill</div>
+          <div class="goal-desc">Every hour I'm bored is an hour I could be learning something. That's the whole plan.</div>
+          <span class="goal-status status-active">● Ongoing</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="games">
+    <div class="container reveal">
+      <div class="section-label">// what I play</div>
+      <h2 class="section-title">Games & Vibes</h2>
+      <p class="section-sub">Roblox for the scripting side, everything else for the fun.</p>
+      <div class="slideshow-wrap">
+        <div class="slideshow" id="slideshow">
+          <div class="slide slide-bg-1 active">
+            <span class="slide-emoji">🎮</span>
+            <div class="slide-title">Roblox</div>
+            <div class="slide-sub">scripting + playing — the main one</div>
+          </div>
+          <div class="slide slide-bg-2">
+            <span class="slide-emoji">⛏️</span>
+            <div class="slide-title">Minecraft</div>
+            <div class="slide-sub">when the building mood hits</div>
+          </div>
+          <div class="slide slide-bg-3">
+            <span class="slide-emoji">🪂</span>
+            <div class="slide-title">Fortnite</div>
+            <div class="slide-sub">occasional drops, no promises</div>
+          </div>
+          <div class="slide slide-bg-4">
+            <span class="slide-emoji">📺</span>
+            <div class="slide-title">Videos</div>
+            <div class="slide-sub">watching way too many, zero regrets</div>
+          </div>
+        </div>
+        <div class="slide-controls">
+          <button class="slide-btn" id="prev">&#8592;</button>
+          <div class="slide-dots" id="dots">
+            <div class="slide-dot active"></div>
+            <div class="slide-dot"></div>
+            <div class="slide-dot"></div>
+            <div class="slide-dot"></div>
+          </div>
+          <button class="slide-btn" id="next">&#8594;</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="contact">
+    <div class="container reveal">
+      <div class="section-label">// find me</div>
+      <h2 class="section-title">Let's Connect</h2>
+      <p class="section-sub">Want to script together, play games, or just talk? This is how you reach me.</p>
+      <div class="contact-grid">
+        <a class="contact-card" href="https://discord.gg/bwQFKJQxx" target="_blank" rel="noopener">
+          <div class="contact-icon icon-discord">💬</div>
+          <div>
+            <div class="contact-label">Discord Server</div>
+            <div class="contact-value">discord.gg/bwQFKJQxx</div>
+          </div>
+          <div class="contact-arrow">↗</div>
+        </a>
+        <a class="contact-card" href="https://discord.com/channels/@me/1553069465846157352" target="_blank" rel="noopener" style="transition-delay:0.1s">
+          <div class="contact-icon icon-discord">🫂</div>
+          <div>
+            <div class="contact-label">Direct Message</div>
+            <div class="contact-value">DM me on Discord</div>
+          </div>
+          <div class="contact-arrow">↗</div>
+        </a>
+        <a class="contact-card" href="https://rivoscripts.vercel.app" target="_blank" rel="noopener" style="transition-delay:0.2s">
+          <div class="contact-icon icon-web">🌐</div>
+          <div>
+            <div class="contact-label">Website</div>
+            <div class="contact-value">rivoscripts.vercel.app</div>
+          </div>
+          <div class="contact-arrow">↗</div>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Built by <span class="footer-name">Kairon</span> · Scripter in progress · Best of luck out there
+</footer>
+
+<script>
+// CURSOR
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cursor.style.left = mx+'px'; cursor.style.top = my+'px'; });
+(function animRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx+'px'; ring.style.top = ry+'px';
+  requestAnimationFrame(animRing);
+})();
+
+// CLICK RIPPLE
+document.addEventListener('click', e => {
+  const r = document.createElement('div');
+  r.className = 'ripple';
+  r.style.cssText = `left:${e.clientX}px;top:${e.clientY}px;width:120px;height:120px;`;
+  document.body.appendChild(r);
+  setTimeout(() => r.remove(), 700);
+});
+
+// BUTTON LIGHT FOLLOW
+document.querySelectorAll('.btn, .goal-card, .contact-card').forEach(el => {
+  el.addEventListener('mousemove', e => {
+    const rect = el.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1) + '%';
+    const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1) + '%';
+    el.style.setProperty('--mx', x);
+    el.style.setProperty('--my', y);
+  });
+});
+
+// PARTICLE CANVAS
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const COLORS = ['rgba(91,140,255,', 'rgba(168,85,247,', 'rgba(34,211,238,'];
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.r = Math.random() * 1.5 + 0.5;
+    this.alpha = Math.random() * 0.5 + 0.1;
+    this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.life = Math.random() * 300 + 200;
+    this.age = 0;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy; this.age++;
+    if (this.age > this.life || this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+  }
+  draw() {
+    const fade = this.age < 30 ? this.age/30 : this.age > this.life-30 ? (this.life-this.age)/30 : 1;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+    ctx.fillStyle = this.color + (this.alpha * fade) + ')';
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+// Mouse repel
+let pmx = -999, pmy = -999;
+document.addEventListener('mousemove', e => { pmx = e.clientX; pmy = e.clientY; });
+
+function drawConnections() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i+1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 100) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(91,140,255,${0.06 * (1 - dist/100)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+(function animParticles() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => {
+    const dx = p.x - pmx, dy = p.y - pmy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 80) {
+      p.vx += (dx/dist) * 0.08;
+      p.vy += (dy/dist) * 0.08;
+      p.vx *= 0.95; p.vy *= 0.95;
+    }
+    p.update(); p.draw();
+  });
+  drawConnections();
+  requestAnimationFrame(animParticles);
+})();
+
+// SCROLL REVEALS
+const allReveal = [...document.querySelectorAll('.reveal'), ...document.querySelectorAll('.goal-card'), ...document.querySelectorAll('.contact-card')];
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+allReveal.forEach(el => obs.observe(el));
+
+// SLIDESHOW
+const slides = document.querySelectorAll('.slide');
+const dots = document.querySelectorAll('.slide-dot');
+let cur = 0, timer;
+function goTo(n) {
+  slides[cur].classList.remove('active'); slides[cur].classList.add('out');
+  dots[cur].classList.remove('active');
+  setTimeout(() => slides[cur].classList.remove('out'), 700);
+  cur = (n + slides.length) % slides.length;
+  slides[cur].classList.add('active'); dots[cur].classList.add('active');
+}
+function startAuto() { timer = setInterval(() => goTo(cur+1), 3400); }
+function resetAuto() { clearInterval(timer); startAuto(); }
+document.getElementById('next').addEventListener('click', () => { goTo(cur+1); resetAuto(); });
+document.getElementById('prev').addEventListener('click', () => { goTo(cur-1); resetAuto(); });
+dots.forEach((d,i) => d.addEventListener('click', () => { goTo(i); resetAuto(); }));
+startAuto();
+</script>
+</body>
+</html>
